@@ -1,0 +1,48 @@
+#include <chrono>
+#include <cstdlib>
+#include <iostream>
+#include <omp.h>
+#include <time.h>
+
+using namespace std::chrono;
+using namespace std;
+
+void generateRandomVector(int vector[], int size) {
+    for (int i = 0; i < size; i++) {
+        vector[i] = rand() % 100;
+    }
+}
+
+int main() {
+    unsigned long arraySize = 100000000;
+    srand(time(0));
+    int *array1, *array2, *array3;
+    auto startTime = high_resolution_clock::now();
+    array1 = (int *)malloc(arraySize * sizeof(int));
+    array2 = (int *)malloc(arraySize * sizeof(int));
+    array3 = (int *)malloc(arraySize * sizeof(int));
+    generateRandomVector(array1, arraySize);
+    generateRandomVector(array2, arraySize);
+    
+    int total = 0; // Shared variable to hold the total sum
+
+    #pragma omp parallel for default(none) shared(array1, array2, array3, arraySize, total)
+    for (int i = 0; i < arraySize; i++) {
+        array3[i] = array1[i] + array2[i];
+
+        // Atomically update the total sum
+        #pragma omp atomic
+        total += array3[i];
+    }
+
+    auto stopTime = high_resolution_clock::now();
+    auto elapsedTime = duration_cast<microseconds>(stopTime - startTime);
+    cout << "Total sum: " << total << endl; // Print the total sum
+    cout << "Time taken by function: " << elapsedTime.count() << " microseconds" << endl;
+
+    free(array1);
+    free(array2);
+    free(array3);
+
+    return 0;
+}
